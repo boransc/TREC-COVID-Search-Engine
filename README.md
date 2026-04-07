@@ -39,40 +39,31 @@ Example `secrets.toml`:
 
 ```toml
 PINECONE_API_KEY = "..."
-PINECONE_INDEX = "trec-covid-b5"
-PINECONE_NAMESPACE = ""
 ```
 
 ## Project Structure
 
+```text
 UI/
-│
-├── main.py                    # Streamlit entry point (UI + interaction logic)
-│
-├── backend/
-│   └── pinecone_backend.py   # Handles Pinecone connection and vector retrieval (B5 search)
-│
-├── services/
-│   └── search.py             # Core search pipeline (query → retrieval → filtering → ranking)
-│
-├── render/
-│   └── render.py             # UI components for displaying results and metrics
-│
-├── theme/
-│   └── theme.py              # Light/Dark theme styling and CSS injection
-│
-├── utilities/
-│   ├── text_utils.py         # Tokenisation and query preprocessing
-│   └── results_normalise.py  # Normalises retrieved results into UI-friendly format
-│
-├── data/
-│   └── projection_config.pkl # Projection matrix for B5 hybrid retrieval
-│
-├── .streamlit/
-│   └── secrets.toml          # (Local only) Stores API keys (e.g., Pinecone) — not committed to Git
-│
-├── requirements.txt          # Python dependencies
-└── README.md                 # Project documentation
+	main.py
+	README.md
+	requirements.txt
+	.streamlit/
+		secrets.toml
+	backend/
+		pinecone_backend.py
+	data/
+		projection_config.pkl
+	render/
+		render.py
+	services/
+		search.py
+	theme/
+		theme.py
+	utilities/
+		results_normalise.py
+		text_utils.py
+```
 
 ## Folder structure
 
