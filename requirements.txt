@@ -1,0 +1,14 @@
+# Streamlit UI requirements
+
+# UI
+streamlit>=1.55.0
+
+# Retrieval stack (Pinecone + hybrid B5 query encoder)
+# NOTE: `torch` wheels can be large; install may take time.
+pinecone>=5
+numpy
+scipy
+scikit-learn
+torch
+transformers
+sentence-transformers
