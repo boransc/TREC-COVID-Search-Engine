@@ -32,6 +32,28 @@ def _year_from_publish_time(publish_time: str) -> int:
     m = re.match(r"^(\\d{4})", (publish_time or "").strip())
     return int(m.group(1)) if m else 0
 
+import re
+
+def clean_url(raw_url: str, title: str) -> str:
+    if not raw_url:
+        return f"https://scholar.google.com/scholar?q={title.replace(' ', '+')}"
+
+    # Split on common separators
+    parts = re.split(r"[;\s]+", raw_url)
+
+    for part in parts:
+        part = part.strip()
+
+        # If it's a DOI
+        if part.startswith("10."):
+            return f"https://doi.org/{part}"
+
+        # If it's already a valid URL
+        if part.startswith("http"):
+            return part
+
+    # fallback
+    return f"https://scholar.google.com/scholar?q={title.replace(' ', '+')}"
 
 def normalize_result(item: dict[str, Any], query_terms: list[str]) -> dict[str, Any]:
     title = _clean_str(_pick(item, ["title", "paper_title", "document_title"], "Untitled paper"))
@@ -49,7 +71,10 @@ def normalize_result(item: dict[str, Any], query_terms: list[str]) -> dict[str, 
     citations = _to_int(_pick(item, ["citations", "cited_by", "citation_count"], 0), 0)
     score = float(item.get("score", 0.0)) if isinstance(item.get("score", 0.0), (int, float, str)) else 0.0
 
-    url = _clean_str(_pick(item, ["url", "doi", "link"], ""))
+    url = clean_url(
+        _clean_str(_pick(item, ["url", "doi", "link"], "")),
+        title
+    )
     if url.startswith("10."):
         url = f"https://doi.org/{url}"
     pdf_url = _clean_str(_pick(item, ["pdf_url", "pdf", "pdfUrl"], url))
