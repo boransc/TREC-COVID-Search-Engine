@@ -1,6 +1,6 @@
 from utilities.text_utils import normalize_tokens
 from utilities.results_normalise import normalize_result
-from backend.pinecone_backend import PineconeBackendError, pinecone_b5_search
+from backend.pinecone_backend import PineconeBackendError, pinecone_b5_search, hybrid_rrf_mmr_search
 
 
 def apply_filters(results, year_from, year_to, min_citations):
@@ -37,11 +37,13 @@ def search(
     query_terms = normalize_tokens(query)
 
     try:
-        raw = pinecone_b5_search(
+        raw = hybrid_rrf_mmr_search(
             query=query,
-            top_k=top_k,
             api_key=pinecone_api_key,
             index_name=pinecone_index,
+            top_k_retrieve=50,
+            top_n_final=top_k,
+            mmr_lambda=0.7,
             namespace=pinecone_namespace or None,
         )
 
