@@ -121,7 +121,7 @@ if search_clicked and query.strip():
         )
 
         st.markdown(
-            f"**{len(results)} papers found** • {elapsed_ms} ms"
+            f"**{len(results)} papers found** • {elapsed_ms/1000:.2f}s"
         )
 
         # ─────────────────────────────────────

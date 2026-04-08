@@ -66,12 +66,11 @@ def render_result_card(result: dict[str, Any], rank: int, *, show_debug: bool) -
 
     year = result.get("year", "?")
     venue = html.escape(str(result.get("venue", "Unknown venue")))
-    citations = _to_int(result.get("citations", 0), 0)
     score = float(result.get("score", 0.0))
     snippet = str(result.get("snippet", html.escape(str(result.get("abstract", "No abstract available.")))))
     doc_id = html.escape(str(result.get("doc_id", "unknown")))
 
-    chips = f"<span class='chip'>Cited by {citations}</span><span class='chip'>Relevance {score:.2f}</span>"
+    chips = f"<span class='chip'>Relevance {score:.2f}</span>"
     if show_debug:
         chips += f"<span class='chip'>ID {doc_id}</span>"
 
