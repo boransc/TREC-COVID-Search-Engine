@@ -12,7 +12,7 @@ from theme.theme import inject_theme
 # ─────────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────────
-PINECONE_INDEX = "trec-covid-b5"
+PINECONE_INDEX = "trec-covid"
 
 
 # ─────────────────────────────────────────────
@@ -59,32 +59,22 @@ search_clicked = st.button("Search")
 with st.sidebar:
     st.header("Filters")
 
-    sort_by = st.selectbox(
-        "Sort by",
-        ["Relevance", "Date", "Citations"],
-        index=0,
+    retrieval_mode = st.selectbox(
+        "Retrieval Method",
+        [
+            "B5 (Projection)",
+            "Hybrid (RRF + MMR)",
+        ]
     )
 
+    sort_by = st.selectbox("Sort by", ["Relevance", "Date", "Citations"])
     top_k = st.slider("Results", 5, 30, 10)
 
-    year_from, year_to = st.slider(
-        "Year range",
-        2019,
-        2026,
-        (2020, 2025),
-    )
+    year_from, year_to = st.slider("Year range", 2019, 2026, (2020, 2025))
 
-    min_citations = st.slider(
-        "Minimum citations",
-        0,
-        500,
-        0,
-        step=10,
-    )
+    min_citations = st.slider("Minimum citations", 0, 500, 0, step=10)
 
     st.divider()
-
-    # Appearance
     st.subheader("Appearance")
     st.radio("Theme", ["Light", "Dark"], key="theme_choice")
     show_debug = st.toggle("Show debug info")
@@ -104,13 +94,13 @@ if search_clicked and query.strip():
     with st.spinner("Retrieving papers using hybrid search..."):
         results, err = search(
             query=query,
+            mode=retrieval_mode,
             top_k=top_k,
             year_from=year_from,
             year_to=year_to,
             min_citations=min_citations,
             sort_by=sort_by,
             pinecone_api_key=st.secrets.get("PINECONE_API_KEY", ""),
-            pinecone_index="trec-covid-b5",
             pinecone_namespace="",
         )
     elapsed_ms = int((time.perf_counter() - start) * 1000)

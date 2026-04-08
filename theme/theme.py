@@ -107,8 +107,33 @@ button {{
 }}
 
 /* DROPDOWNS */
-.stSelectbox div {{
+div[data-baseweb="select"] > div {{
     background-color: var(--card) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+}}
+
+div[data-baseweb="popover"] {{
+    background-color: var(--card) !important;
+    border: 1px solid var(--border) !important;
+}}
+
+ul[role="listbox"] {{
+    background-color: var(--card) !important;
+}}
+
+li[role="option"] {{
+    background-color: var(--card) !important;
+    color: var(--text) !important;
+}}
+
+li[role="option"]:hover {{
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+}}
+
+li[role="option"][aria-selected="true"] {{
+    background-color: var(--bg) !important;
     color: var(--text) !important;
 }}
 
