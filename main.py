@@ -12,8 +12,8 @@ from theme.theme import inject_theme
 # ─────────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────────
-PINECONE_INDEX = "trec-covid"
-
+PINECONE_INDEXES = ["trec-covid", "trec-covid-b5"]
+st.session_state.setdefault("pinecone_index", PINECONE_INDEXES[0])
 
 # ─────────────────────────────────────────────
 # PAGE SETUP
@@ -45,12 +45,13 @@ st.markdown(
 # ─────────────────────────────────────────────
 # SEARCH BAR
 # ─────────────────────────────────────────────
-query = st.text_input(
-    label="Search papers",
-    placeholder='Try: "long covid cognitive symptoms"',
-    label_visibility="visible"
-)
-search_clicked = st.button("Search")
+with st.form("search_form", clear_on_submit=False):
+    query = st.text_input(
+        label="Search papers",
+        placeholder='Try: "long covid cognitive symptoms"',
+        label_visibility="visible"
+    )
+    search_clicked = st.form_submit_button("Search")
 
 
 # ─────────────────────────────────────────────
@@ -68,6 +69,12 @@ with st.sidebar:
     # )
 
     # sort_by = st.selectbox("Sort by", ["Relevance", "Date", "Citations"])
+
+    pinecone_index = st.selectbox(
+        "Pinecone Index",
+        PINECONE_INDEXES,
+        key="pinecone_index",
+    )
     top_k = st.slider("Results", 5, 30, 10)
 
     year_from, year_to = st.slider("Year range", 2019, 2026, (2020, 2025))
@@ -99,7 +106,7 @@ if search_clicked and query.strip():
             year_to=year_to,
             min_citations=0,
             pinecone_api_key=st.secrets.get("PINECONE_API_KEY", ""),
-            pinecone_index=PINECONE_INDEX,
+            pinecone_index=st.session_state.pinecone_index,
             pinecone_namespace="",
         )
     elapsed_ms = int((time.perf_counter() - start) * 1000)
