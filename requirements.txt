@@ -12,3 +12,4 @@ scikit-learn
 torch
 transformers
 sentence-transformers
+torchvision
