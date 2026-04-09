@@ -34,23 +34,27 @@ def _year_from_publish_time(publish_time: str) -> int:
 
 import re
 
-def clean_url(raw_url: str, title: str) -> str:
-    if not raw_url:
-        return f"https://scholar.google.com/scholar?q={title.replace(' ', '+')}"
+def clean_url(raw_url: str, title: str, doi: str | None = None) -> str:
+    # PRIORITY 1 → DOI
+    if doi:
+        doi = str(doi).strip()
+        if doi.startswith("10."):
+            return f"https://doi.org/{doi}"
 
-    # Split on common separators
-    parts = re.split(r"[;\s]+", raw_url)
+    if raw_url:
+        parts = re.split(r"[;\s]+", raw_url)
 
-    for part in parts:
-        part = part.strip()
+        for part in parts:
+            part = part.strip()
 
-        # If it's a DOI
-        if part.startswith("10."):
-            return f"https://doi.org/{part}"
+            if part.startswith("https://doi.org"):
+                return part
 
-        # If it's already a valid URL
-        if part.startswith("http"):
-            return part
+            if part.startswith("http"):
+                return part
+
+            if part.startswith("10."):
+                return f"https://doi.org/{part}"
 
     # fallback
     return f"https://scholar.google.com/scholar?q={title.replace(' ', '+')}"
@@ -68,31 +72,49 @@ def normalize_result(item: dict[str, Any], query_terms: list[str]) -> dict[str, 
     if not isinstance(authors, list):
         authors = [a.strip() for a in str(authors).split(",") if a.strip()]
 
-    citations = _to_int(_pick(item, ["citations", "cited_by", "citation_count"], 0), 0)
     score = float(item.get("score", 0.0)) if isinstance(item.get("score", 0.0), (int, float, str)) else 0.0
 
+    doi = _clean_str(_pick(item, ["doi"], ""))
+
     url = clean_url(
-        _clean_str(_pick(item, ["url", "doi", "link"], "")),
-        title
+        _clean_str(_pick(item, ["url", "link"], "")),
+        title,      
+        doi
     )
     if url.startswith("10."):
         url = f"https://doi.org/{url}"
-    pdf_url = _clean_str(_pick(item, ["pdf_url", "pdf", "pdfUrl"], url))
+    # pdf_url = _clean_str(_pick(item, ["pdf_url", "pdf", "pdfUrl"], url))
 
     doc_id = _clean_str(_pick(item, ["doc_id", "id"], "unknown"))
     snippet = build_snippet(abstract if abstract else title, query_terms)
 
+    # KEEP ORIGINAL METADATA
+    metadata_fields = {
+        "doi": _clean_str(item.get("doi")),
+        "pmcid": _clean_str(item.get("pmcid")),
+        "pubmed_id": _clean_str(item.get("pubmed_id")),
+        "source_x": _clean_str(item.get("source_x")),
+        "journal": _clean_str(item.get("journal")),
+        "publish_year": _to_int(item.get("publish_year")),
+        "_id": _clean_str(item.get("_id")),
+    }
+
     return {
         "doc_id": doc_id,
         "title": title,
-        "authors": authors,
         "year": year,
+        "publish_time": publish_time,
         "venue": venue,
-        "abstract": abstract or "No abstract available.",
-        "citations": citations,
         "url": url or "#",
-        "pdf_url": pdf_url or (url or "#"),
         "score": float(score),
         "snippet": snippet,
-        **{k: v for k, v in item.items() if k in ("sparse_score", "dense_score", "temporal_score", "mmr_score")},
+
+        # 👇 ADD THIS
+        **metadata_fields,
+
+        # existing scores
+        **{
+            k: v for k, v in item.items()
+            if k in ("sparse_score", "dense_score", "temporal_score", "mmr_score")
+        },
     }

@@ -187,6 +187,143 @@ def pinecone_b5_search(
 
     return results
 
+def dense_only_search(
+    *,
+    query: str,
+    top_k: int,
+    api_key: str,
+    index_name: str,
+    namespace: str | None = None,
+) -> list[dict[str, Any]]:
+
+    index = get_index(api_key, index_name)
+
+    q_dense = encode_dense(query)
+    q_sparse_indices, q_sparse_values = encode_sparse(query)
+
+    # alpha = 1 → dense only
+    dense_vec = q_dense.tolist()
+    sparse_vec = {
+        "indices": q_sparse_indices,
+        "values": [0.0] * len(q_sparse_values),
+    }
+
+    resp = index.query(
+        vector=dense_vec,
+        sparse_vector=sparse_vec,
+        top_k=top_k,
+        include_metadata=True,
+        namespace=namespace or None,
+    )
+
+    return [
+        {
+            "doc_id": m.id,
+            "score": m.score,
+            **(m.metadata or {}),
+        }
+        for m in resp.matches
+    ]
+
+
+def sparse_only_search(
+    *,
+    query: str,
+    top_k: int,
+    api_key: str,
+    index_name: str,
+    namespace: str | None = None,
+) -> list[dict[str, Any]]:
+
+    index = get_index(api_key, index_name)
+
+    q_dense = encode_dense(query)
+    q_sparse_indices, q_sparse_values = encode_sparse(query)
+
+    # alpha = 0 → sparse only
+    dense_vec = [0.0] * len(q_dense)
+    sparse_vec = {
+        "indices": q_sparse_indices,
+        "values": q_sparse_values,
+    }
+
+    resp = index.query(
+        vector=dense_vec,
+        sparse_vector=sparse_vec,
+        top_k=top_k,
+        include_metadata=True,
+        namespace=namespace or None,
+    )
+
+    return [
+        {
+            "doc_id": m.id,
+            "score": m.score,
+            **(m.metadata or {}),
+        }
+        for m in resp.matches
+    ]
+
+
+def rrf_search(
+    *,
+    query: str,
+    top_k: int,
+    api_key: str,
+    index_name: str,
+    namespace: str | None = None,
+    rrf_k: int = 60,
+    rrf_weights: list[float] | None = None,
+) -> list[dict[str, Any]]:
+
+    if rrf_weights is None:
+        rrf_weights = [0.6, 0.4]
+
+    index = get_index(api_key, index_name)
+
+    q_dense = encode_dense(query)
+    q_sparse_indices, q_sparse_values = encode_sparse(query)
+
+    # Dense pass
+    dense_resp = index.query(
+        vector=q_dense.tolist(),
+        top_k=top_k,
+        include_metadata=True,
+        namespace=namespace or None,
+    )
+
+    dense_hits = [
+        {"id": m.id, "score": m.score, "metadata": m.metadata or {}}
+        for m in dense_resp.matches
+    ]
+
+    # Sparse pass
+    sparse_resp = index.query(
+        vector=[0.0] * len(q_dense),
+        sparse_vector={"indices": q_sparse_indices, "values": q_sparse_values},
+        top_k=top_k,
+        include_metadata=True,
+        namespace=namespace or None,
+    )
+
+    sparse_hits = [
+        {"id": m.id, "score": m.score, "metadata": m.metadata or {}}
+        for m in sparse_resp.matches
+    ]
+
+    # RRF fusion
+    fused = rrf_fuse([dense_hits, sparse_hits], weights=rrf_weights, k=rrf_k)
+
+    return [
+        {
+            "doc_id": d["id"],
+            "score": d["rrf_score"],
+            **d["metadata"],
+        }
+        for d in fused[:top_k]
+    ]
+
+
 
 # ─────────────────────────────────────────────
 # RRF FUSION

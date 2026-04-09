@@ -1,12 +1,12 @@
-from utilities.text_utils import normalize_tokens
-from utilities.results_normalise import normalize_result
-
 from backend.pinecone_backend import (
     PineconeBackendError,
-    pinecone_b5_search,
+    dense_only_search,
+    sparse_only_search,
+    rrf_search,
     hybrid_rrf_mmr_search,
 )
-
+from utilities.text_utils import normalize_tokens
+from utilities.results_normalise import normalize_result
 
 def apply_filters(results, year_from, year_to, min_citations):
     return [
@@ -26,68 +26,63 @@ def sort_results(results, sort_by):
     return sorted(results, key=lambda r: float(r.get("score", 0.0)), reverse=True)
 
 
-def search(
+def search_all_modes(
     *,
     query: str,
-    mode: str,
     top_k: int,
     year_from: int,
     year_to: int,
     min_citations: int,
-    sort_by: str,
     pinecone_api_key: str,
+    pinecone_index: str,
     pinecone_namespace: str,
-) -> tuple[list[dict], str | None]:
+):
 
     query_terms = normalize_tokens(query)
 
     try:
-        # ─────────────────────────────
-        # B5 MODE
-        # ─────────────────────────────
-        if mode == "B5 (Projection)":
-            raw = pinecone_b5_search(
+        results = {
+            "Dense": dense_only_search(
                 query=query,
                 top_k=top_k,
                 api_key=pinecone_api_key,
-                index_name="trec-covid-b5",
-                namespace=pinecone_namespace or None,
-            )
-
-            # B5 already has score
-            normalized = [normalize_result(dict(item), query_terms) for item in raw]
-
-        # ─────────────────────────────
-        # HYBRID MODE
-        # ─────────────────────────────
-        else:
-            raw = hybrid_rrf_mmr_search(
+                index_name=pinecone_index,
+                namespace=pinecone_namespace,
+            ),
+            "Sparse": sparse_only_search(
+                query=query,
+                top_k=top_k,
+                api_key=pinecone_api_key,
+                index_name=pinecone_index,
+                namespace=pinecone_namespace,
+            ),
+            "RRF": rrf_search(
+                query=query,
+                top_k=top_k,
+                api_key=pinecone_api_key,
+                index_name=pinecone_index,
+                namespace=pinecone_namespace,
+            ),
+            "RRF + MMR": hybrid_rrf_mmr_search(
                 query=query,
                 api_key=pinecone_api_key,
-                index_name="trec-covid",
-                top_k_retrieve=50,
+                index_name=pinecone_index,
                 top_n_final=top_k,
-                mmr_lambda=0.7,
-                namespace=pinecone_namespace or None,
-            )
+                namespace=pinecone_namespace,
+            ),
+        }
 
-            normalized = []
+    except PineconeBackendError as e:
+        return {}, str(e)
 
-            for item in raw:
-                r = normalize_result(dict(item), query_terms)
+    # Normalize + filter
+    def process(res):
+        normalized = [normalize_result(dict(r), query_terms) for r in res]
 
-                # IMPORTANT: use mmr_score as final score
-                r["score"] = float(item.get("mmr_score", item.get("rrf_score", 0.0)))
+        return [
+            r for r in normalized
+            if (r.get("year", 0) == 0 or year_from <= int(r.get("year", 0)) <= year_to)
+            and int(r.get("citations", 0)) >= min_citations
+        ]
 
-                normalized.append(r)
-
-    except PineconeBackendError as exc:
-        return [], str(exc)
-
-    # ─────────────────────────────
-    # FILTER + SORT
-    # ─────────────────────────────
-    filtered = apply_filters(normalized, year_from, year_to, min_citations)
-    sorted_results = sort_results(filtered, sort_by)
-
-    return sorted_results[:top_k], None
+    return {k: process(v) for k, v in results.items()}, None

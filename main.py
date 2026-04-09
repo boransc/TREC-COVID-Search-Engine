@@ -5,7 +5,7 @@ import html
 import streamlit as st
 
 from render.render import render_advanced_metrics, render_result_card
-from services.search import search
+from services.search import search_all_modes
 from theme.theme import inject_theme
 
 
@@ -59,26 +59,26 @@ search_clicked = st.button("Search")
 with st.sidebar:
     st.header("Filters")
 
-    retrieval_mode = st.selectbox(
-        "Retrieval Method",
-        [
-            "B5 (Projection)",
-            "Hybrid (RRF + MMR)",
-        ]
-    )
+    # retrieval_mode = st.selectbox(
+    #     "Retrieval Method",
+    #     [
+    #         "B5 (Projection)",
+    #         "Hybrid (RRF + MMR)",
+    #     ]
+    # )
 
-    sort_by = st.selectbox("Sort by", ["Relevance", "Date", "Citations"])
+    # sort_by = st.selectbox("Sort by", ["Relevance", "Date", "Citations"])
     top_k = st.slider("Results", 5, 30, 10)
 
     year_from, year_to = st.slider("Year range", 2019, 2026, (2020, 2025))
 
-    min_citations = st.slider("Minimum citations", 0, 500, 0, step=10)
+    # min_citations = st.slider("Minimum citations", 0, 500, 0, step=10)
 
-    st.divider()
+    # st.divider()
     st.subheader("Appearance")
     st.radio("Theme", ["Light", "Dark"], key="theme_choice")
-    show_debug = st.toggle("Show debug info")
-    advanced_view = st.toggle("Advanced metrics")
+    # show_debug = st.toggle("Show debug info")
+    # advanced_view = st.toggle("Advanced metrics")
 
 
 inject_theme(st.session_state.theme_choice)
@@ -92,15 +92,14 @@ if search_clicked and query.strip():
     start = time.perf_counter()
 
     with st.spinner("Retrieving papers using hybrid search..."):
-        results, err = search(
+        results_by_mode, err = search_all_modes(
             query=query,
-            mode=retrieval_mode,
             top_k=top_k,
             year_from=year_from,
             year_to=year_to,
-            min_citations=min_citations,
-            sort_by=sort_by,
+            min_citations=0,
             pinecone_api_key=st.secrets.get("PINECONE_API_KEY", ""),
+            pinecone_index=PINECONE_INDEX,
             pinecone_namespace="",
         )
     elapsed_ms = int((time.perf_counter() - start) * 1000)
@@ -111,7 +110,7 @@ if search_clicked and query.strip():
     if err:
         st.error(f"Search failed: {err}")
 
-    elif not results:
+    elif not results_by_mode:
         st.warning("No results found. Try a broader query.")
 
     else:
@@ -120,26 +119,32 @@ if search_clicked and query.strip():
             unsafe_allow_html=True
         )
 
-        st.markdown(
-            f"**{len(results)} papers found** • {elapsed_ms/1000:.2f}s"
-        )
+        st.markdown(f"**{elapsed_ms/1000:.2f}s total latency**")
 
-        # ─────────────────────────────────────
-        # RESULTS
-        # ─────────────────────────────────────
-        for idx, paper in enumerate(results, start=1):
-            render_result_card(
-                paper,
-                idx,
-                show_debug=show_debug,
-            )
+
+        # Create tabs for each retrieval system
+        tabs = st.tabs(list(results_by_mode.keys()))
+
+        for tab, (mode, results) in zip(tabs, results_by_mode.items()):
+            with tab:
+                st.markdown(f"## {mode}")
+
+                if not results:
+                    st.warning("No results found for this method.")
+                    continue
+
+                for idx, paper in enumerate(results, start=1):
+                    render_result_card(
+                        paper,
+                        idx,
+                    )
 
         # ─────────────────────────────────────
         # ADVANCED METRICS
         # ─────────────────────────────────────
-        if advanced_view:
-            with st.expander("Advanced comparison"):
-                render_advanced_metrics(results)
+        # if advanced_view:
+        #     with st.expander("Advanced comparison"):
+        #         render_advanced_metrics(results_by_mode)
 
 
 # ─────────────────────────────────────────────

@@ -53,39 +53,51 @@ def render_advanced_metrics(results: list[dict[str, Any]]) -> None:
     )
 
 
-def render_result_card(result: dict[str, Any], rank: int, *, show_debug: bool) -> None:
+def render_result_card(result: dict, rank: int) -> None:
+    import html
+    import streamlit as st
+
     title = html.escape(str(result.get("title", "Untitled paper")))
     url = str(result.get("url", "#"))
-    pdf_url = str(result.get("pdf_url", url))
 
-    authors_list = result.get("authors", [])
-    if isinstance(authors_list, list):
-        authors = ", ".join(str(a) for a in authors_list) if authors_list else "Unknown authors"
-    else:
-        authors = str(authors_list)
-
-    year = result.get("year", "?")
     venue = html.escape(str(result.get("venue", "Unknown venue")))
+    year = result.get("year", "?")
     score = float(result.get("score", 0.0))
-    snippet = str(result.get("snippet", html.escape(str(result.get("abstract", "No abstract available.")))))
-    doc_id = html.escape(str(result.get("doc_id", "unknown")))
 
-    chips = f"<span class='chip'>Relevance {score:.2f}</span>"
-    if show_debug:
-        chips += f"<span class='chip'>ID {doc_id}</span>"
+    # ONLY metadata fields (as you wanted)
+    metadata_fields = [
+        "_id",
+        "doi",
+        "journal",
+        "pmcid",
+        "publish_time",
+        "publish_year",
+        "pubmed_id",
+        "source_x",
+        "title",
+        "url",
+    ]
 
-    st.markdown(
-        f"""
+    with st.container():
+
+        # --- CARD ---
+        st.markdown(f"""
 <div class="result-card">
-  <div class="result-title">{rank}. <a href="{html.escape(url)}" target="_blank" rel="noreferrer">{title}</a></div>
-  <div class="meta">{html.escape(authors)} — {venue} — {html.escape(str(year))}</div>
-  <div class="snippet">{snippet}</div>
-  <div style="margin-top:10px;">{chips}</div>
-  <div class="link-row">
-    <a href="{html.escape(url)}" target="_blank" rel="noreferrer">Related articles</a>
-    <a href="{html.escape(pdf_url)}" target="_blank" rel="noreferrer">View PDF</a>
+  <div class="result-title">
+    {rank}. <a href="{html.escape(url)}" target="_blank">{title}</a>
   </div>
+  <div class="meta">{venue} — {year}</div>
+  <div style="margin-top:8px;">Relevance {score:.2f}</div>
 </div>
-""",
-        unsafe_allow_html=True,
-    )
+""", unsafe_allow_html=True)
+
+        # --- EXPANDER (visually inside card) ---
+        with st.expander("Show more"):
+
+            for field in metadata_fields:
+                value = result.get(field)
+
+                if value not in (None, "", []):
+                    st.markdown(
+                        f"**{field}:** {html.escape(str(value))}"
+                    )

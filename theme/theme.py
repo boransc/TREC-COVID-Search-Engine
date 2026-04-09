@@ -30,6 +30,7 @@ THEMES: dict[str, dict[str, str]] = {
 
 def inject_theme(theme_name: str) -> None:
     tokens = THEMES.get(theme_name, THEMES["Light"])
+
     st.markdown(f"""
 <style>
 
@@ -49,14 +50,10 @@ def inject_theme(theme_name: str) -> None:
     color: var(--text);
 }}
 
-/* FORCE TEXT VISIBILITY */
-* {{
-    color: var(--text) !important;
-}}
-
 /* HEADINGS */
 h1, h2, h3 {{
     font-family: 'Crimson Text', serif;
+    color: var(--text);
 }}
 
 /* HERO */
@@ -74,10 +71,9 @@ h1, h2, h3 {{
     border-radius: 12px;
     padding: 14px;
     margin-bottom: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }}
 
-/* SIDEBAR FULL FIX */
+/* SIDEBAR */
 section[data-testid="stSidebar"] {{
     background-color: {tokens['sidebar']} !important;
 }}
@@ -91,53 +87,27 @@ input, textarea {{
     background-color: var(--card) !important;
     color: var(--text) !important;
     border: 1px solid var(--border) !important;
-    border-radius: 6px;
+}}
+
+/* SELECTBOX */
+div[data-baseweb="select"] > div {{
+    background-color: var(--card) !important;
+    color: var(--text) !important;
 }}
 
 /* BUTTONS */
 button {{
-    background-color: var(--bg) !important;
-    color: white !important;
-    border: 1px solid var(--border) !important;
-}}
-
-/* SLIDERS */
-.stSlider > div {{
-    color: var(--text) !important;
-}}
-
-/* DROPDOWNS */
-div[data-baseweb="select"] > div {{
     background-color: var(--card) !important;
     color: var(--text) !important;
     border: 1px solid var(--border) !important;
 }}
 
-div[data-baseweb="popover"] {{
-    background-color: var(--card) !important;
-    border: 1px solid var(--border) !important;
-}}
-
-ul[role="listbox"] {{
-    background-color: var(--card) !important;
-}}
-
-li[role="option"] {{
-    background-color: var(--card) !important;
+/* SLIDER TEXT */
+.stSlider {{
     color: var(--text) !important;
 }}
 
-li[role="option"]:hover {{
-    background-color: var(--bg) !important;
-    color: var(--text) !important;
-}}
-
-li[role="option"][aria-selected="true"] {{
-    background-color: var(--bg) !important;
-    color: var(--text) !important;
-}}
-
-/* REMOVE STREAMLIT DEFAULT WHITE BLOCKS */
+/* FORM BLOCK */
 div[data-testid="stForm"] {{
     background: var(--card) !important;
     border: 1px solid var(--border);
@@ -147,6 +117,57 @@ div[data-testid="stForm"] {{
 mark {{
     background: {tokens['mark_bg']};
     color: black;
+}}
+
+/* ========================= */
+/* EXPANDER FIX (IMPORTANT) */
+/* ========================= */
+
+div[data-testid="stExpander"] {{
+    background-color: var(--card) !important;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}}
+
+div[data-testid="stExpander"] > details > summary {{
+    color: var(--text) !important;
+    background-color: var(--card) !important;
+}}
+
+div[data-testid="stExpander"] > details > div {{
+    background-color: var(--card) !important;
+    color: var(--text) !important;
+}}
+
+/* ========================= */
+/* LINKS */
+/* ========================= */
+
+a {{
+    color: var(--accent);
+    text-decoration: none;
+}}
+
+a:hover {{
+    text-decoration: underline;
+}}
+
+/* Make expander visually part of card */
+div[data-testid="stExpander"] {{
+    margin-top: -20px !important;   /* pulls it into the card */
+    border-top: none !important;
+    border-radius: 0 0 12px 12px !important;
+}}
+
+/* Remove double border effect */
+div[data-testid="stExpander"] > div {{
+    border-top: none !important;
+}}
+
+/* Make expander header blend */
+div[data-testid="stExpander"] summary {{
+    padding-top: 6px;
+    padding-bottom: 6px;
 }}
 
 </style>
