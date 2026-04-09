@@ -62,6 +62,7 @@ def render_result_card(result: dict, rank: int) -> None:
 
     venue = html.escape(str(result.get("venue", "Unknown venue")))
     year = result.get("year", "?")
+    date_text = result.get("publish_time") or result.get("year", "?")
     score = float(result.get("score", 0.0))
 
     # ONLY metadata fields (as you wanted)
@@ -86,7 +87,7 @@ def render_result_card(result: dict, rank: int) -> None:
   <div class="result-title">
     {rank}. <a href="{html.escape(url)}" target="_blank">{title}</a>
   </div>
-  <div class="meta">{venue} — {year}</div>
+  <div class="meta">{venue} — {date_text}</div>
   <div style="margin-top:8px;">Relevance {score:.2f}</div>
 </div>
 """, unsafe_allow_html=True)
