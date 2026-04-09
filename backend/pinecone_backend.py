@@ -631,4 +631,4 @@ def pinecone_b5_search_mmr(
             }
         )
 
-    return results   
+    return results
