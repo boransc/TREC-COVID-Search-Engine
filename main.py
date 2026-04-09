@@ -35,7 +35,6 @@ st.markdown(
     """
     <div class="hero">
         <h2 style="margin:0;">TREC-COVID Scholar Search</h2>
-        <div class="meta">Hybrid dense + sparse retrieval with projection fusion (B5)</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -77,8 +76,6 @@ with st.sidebar:
     )
     top_k = st.slider("Results", 5, 30, 10)
 
-    year_from, year_to = st.slider("Year range", 2019, 2026, (2020, 2025))
-
     # min_citations = st.slider("Minimum citations", 0, 500, 0, step=10)
 
     # st.divider()
@@ -98,12 +95,10 @@ if search_clicked and query.strip():
 
     start = time.perf_counter()
 
-    with st.spinner("Retrieving papers using hybrid search..."):
+    with st.spinner("Retrieving papers please wait..."):
         results_by_mode, err = search_all_modes(
             query=query,
             top_k=top_k,
-            year_from=year_from,
-            year_to=year_to,
             min_citations=0,
             pinecone_api_key=st.secrets.get("PINECONE_API_KEY", ""),
             pinecone_index=st.session_state.pinecone_index,

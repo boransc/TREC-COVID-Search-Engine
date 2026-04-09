@@ -62,7 +62,8 @@ def load_projection():
         with open(PROJ_PATH, "rb") as f:
             data = pickle.load(f)
 
-        return data["projector"], data["alpha"]
+        # return data["projector"], data["alpha"]
+        return data["projector"], 0.95
 
     except Exception as e:
         raise PineconeBackendError(f"Projection file not found: {e}")
@@ -533,6 +534,93 @@ def hybrid_rrf_mmr_search(
                 "doc_id": doc["id"],
                 "rrf_score": doc["rrf_score"],
                 "mmr_score": doc["mmr_score"],
+                "title": meta.get("title", ""),
+                "abstract": meta.get("abstract", ""),
+                "publish_time": meta.get("publish_time", ""),
+                "journal": meta.get("journal", ""),
+                "authors": meta.get("authors", ""),
+                "url": meta.get("url", ""),
+                "doi": meta.get("doi", ""),
+            }
+        )
+
+    return results
+
+
+# ─────────────────────────────────────────────
+# B5 + MMR SEARCH
+# ─────────────────────────────────────────────
+def pinecone_b5_search_mmr(
+    *,
+    query: str,
+    top_k: int,
+    api_key: str,
+    index_name: str,
+    namespace: str | None = None,
+    mmr_lambda: float = 0.7,
+    top_k_retrieve: int = 50,
+) -> list[dict[str, Any]]:
+    """B5 projection search with MMR re-ranking."""
+
+    if not api_key:
+        raise PineconeBackendError("Missing Pinecone API key")
+
+    if not index_name:
+        raise PineconeBackendError("Missing Pinecone index name")
+
+    # Step 1: Get B5 query vector
+    q_combined = encode_query_b5(query)
+
+    # Step 2: Query B5 index
+    index = get_index(api_key, index_name)
+
+    resp = index.query(
+        vector=q_combined.tolist(),
+        top_k=top_k_retrieve,
+        include_metadata=True,
+        namespace=namespace or None,
+    )
+
+    # Step 3: Prepare candidates
+    candidates = []
+    candidate_ids = []
+    for m in resp.matches:
+        meta = m.metadata or {}
+        candidates.append({
+            "id": m.id,
+            "score": m.score,
+            "metadata": meta,
+        })
+        candidate_ids.append(m.id)
+
+    if not candidates:
+        return []
+
+    # Step 4: Fetch dense vectors for MMR
+    fetched = index.fetch(ids=candidate_ids, namespace=namespace or None)
+
+    doc_vecs = {}
+    for did, data in fetched.vectors.items():
+        doc_vecs[did] = data.values
+
+    # Step 5: MMR Re-ranking
+    final = mmr_rerank(
+        query_vec=q_combined,
+        candidates=candidates,
+        doc_vecs=doc_vecs,
+        lam=mmr_lambda,
+        top_n=top_k,
+    )
+
+    # Step 6: Format results
+    results = []
+    for doc in final:
+        meta = doc["metadata"]
+        results.append(
+            {
+                "doc_id": doc["id"],
+                "score": doc["score"],
+                "mmr_score": doc.get("mmr_score", 0.0),
                 "title": meta.get("title", ""),
                 "abstract": meta.get("abstract", ""),
                 "publish_time": meta.get("publish_time", ""),
