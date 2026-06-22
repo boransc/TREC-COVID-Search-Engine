@@ -1,8 +1,10 @@
-# TREC-COVID Scholar Search (Streamlit + Pinecone)
+# TREC-COVID Scholar Search Engine (Streamlit + Pinecone)
 
 A lightweight Streamlit app for searching an **already-indexed TREC-COVID corpus** stored in **Pinecone**.
 
 The UI is intentionally simple: type a query, pick how many results to show + a year range, then compare multiple retrieval strategies side-by-side.
+
+The paper for this project is available [here](https://arxiv.org/pdf/2604.13728).
 
 ## What the UI shows
 
